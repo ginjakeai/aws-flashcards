@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F5F2EC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121417" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="CLF単語帳">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<title>CLF単語帳</title>
+<style>
+:root{
+  --bg:#F5F2EC; --surface:#FFFFFF; --surface-2:#EEEAE2; --ink:#1D1F24; --ink-2:#575B64; --ink-3:#8B8F97;
+  --line:#E3DED4; --accent:#D2600E; --accent-ink:#FFFFFF; --accent-soft:#FBE6D4;
+  --ok:#2E8A57; --ok-soft:#DCF0E3; --ng:#C0403A; --ng-soft:#F7DFDD; --mid:#D99A1E;
+  --shadow:0 1px 2px rgba(40,30,15,.05),0 10px 28px rgba(40,30,15,.07);
+  --r:18px;
+  --font:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Noto Sans CJK JP",sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#121417; --surface:#1B1E23; --surface-2:#252930; --ink:#ECEDEF; --ink-2:#A8ADB5; --ink-3:#787E87;
+    --line:#2D3239; --accent:#F08A3C; --accent-ink:#1E1205; --accent-soft:#3A2512;
+    --ok:#4DC386; --ok-soft:#163426; --ng:#F2736A; --ng-soft:#3E1D1B; --mid:#E7B44A;
+    --shadow:none;
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.6}
+body{min-height:100vh;min-height:100dvh;-webkit-text-size-adjust:100%}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;touch-action:manipulation}
+[hidden]{display:none!important}
+.wrap{max-width:560px;margin:0 auto;padding:16px 16px calc(96px + env(safe-area-inset-bottom))}
+
+/* header */
+.top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:8px 2px 14px}
+.top h1{margin:0;font-size:1.5rem;letter-spacing:.02em;font-weight:800}
+.top .sub{color:var(--ink-3);font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* cards */
+.card{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow);padding:18px;margin-bottom:14px;border:1px solid var(--line)}
+@media (prefers-color-scheme:light){.card{border-color:transparent}}
+.card h2{margin:0 0 12px;font-size:.95rem;font-weight:700;color:var(--ink-2);letter-spacing:.04em}
+.muted{color:var(--ink-3)} .center{text-align:center}
+.note{color:var(--ink-3);font-size:.8rem;margin:10px 0 0;line-height:1.55}
+
+/* summary */
+.sum-main{display:flex;align-items:flex-end;justify-content:space-between;gap:8px}
+.sum-big{font-size:2.6rem;font-weight:800;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.sum-big small{font-size:1rem;color:var(--ink-3);font-weight:600;margin-left:4px}
+.sum-label{color:var(--ink-2);font-size:.8rem;margin-top:6px}
+.sum-today{text-align:right}
+.sum-today b{display:block;font-size:1.6rem;line-height:1.1;font-variant-numeric:tabular-nums;color:var(--accent)}
+.sum-today span{font-size:.75rem;color:var(--ink-3)}
+.stack{display:flex;height:10px;border-radius:99px;overflow:hidden;background:var(--surface-2);margin:16px 0 10px}
+.stack i{display:block;height:100%}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.75rem;color:var(--ink-2)}
+.legend span::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:1px;background:var(--c)}
+.c-ok{--c:var(--ok);background:var(--ok)} .c-mid{--c:var(--mid);background:var(--mid)} .c-new{--c:var(--surface-2);background:var(--surface-2)}
+.legend .c-new::before{background:var(--ink-3);opacity:.35}
+
+/* settings rows */
+.row{margin-bottom:14px} .row:last-child{margin-bottom:0}
+.row-label{font-size:.78rem;color:var(--ink-3);margin-bottom:6px;font-weight:600}
+.seg{display:flex;background:var(--surface-2);border-radius:12px;padding:3px;gap:3px}
+.seg button{flex:1;border:0;background:transparent;padding:9px 4px;border-radius:9px;font-size:.85rem;font-weight:600;color:var(--ink-2);white-space:nowrap}
+.seg button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+@media (prefers-color-scheme:dark){.seg button.on{background:#3A3F48}}
+.pick{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:11px 14px;text-align:left}
+.pick span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.pick em{font-style:normal;color:var(--ink-3);font-size:.85rem;flex:none}
+
+/* buttons */
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border:0;border-radius:14px;padding:15px 16px;font-weight:700;font-size:1rem;margin-top:10px;text-decoration:none}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.btn.primary:disabled{opacity:.4}
+.btn.ghost{background:var(--surface-2);color:var(--ink)}
+.btn.danger{background:transparent;color:var(--ng);border:1px solid var(--ng-soft)}
+.btn.small{padding:11px 14px;font-size:.9rem}
+.btn:active{transform:scale(.985)}
+.start-meta{font-size:.78rem;color:var(--ink-3);text-align:center;margin-top:8px}
+
+/* category progress */
+.cats{list-style:none;margin:0;padding:0}
+.cats li button{width:100%;display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;border:0;background:transparent;padding:10px 0;border-top:1px solid var(--line);text-align:left}
+.cats li:first-child button{border-top:0;padding-top:2px}
+.cats .nm{font-size:.88rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cats .ct{font-size:.78rem;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.cats .mini{grid-column:1/-1;display:flex;height:5px;border-radius:9px;overflow:hidden;background:var(--surface-2)}
+.cats .mini i{height:100%;display:block}
+
+/* tabs */
+#tabs{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;justify-content:center;background:color-mix(in srgb,var(--bg) 88%,transparent);-webkit-backdrop-filter:saturate(1.6) blur(16px);backdrop-filter:saturate(1.6) blur(16px);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
+#tabs .in{display:flex;width:100%;max-width:560px}
+#tabs button{flex:1;border:0;background:transparent;padding:6px 0 4px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.68rem;font-weight:600;color:var(--ink-3)}
+#tabs button svg{width:24px;height:24px}
+#tabs button.on{color:var(--accent)}
+
+/* list */
+.search{position:sticky;top:0;z-index:2;background:var(--bg);padding:4px 0 10px}
+.search input{width:100%;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:12px 14px;font-size:16px;outline:none}
+.search input:focus{border-color:var(--accent)}
+.search .seg{margin-top:8px}
+.count{font-size:.78rem;color:var(--ink-3);margin:2px 2px 8px}
+.items{list-style:none;margin:0;padding:0}
+.items li{background:var(--surface);border-radius:14px;margin-bottom:8px;border:1px solid var(--line)}
+@media (prefers-color-scheme:light){.items li{border-color:transparent;box-shadow:0 1px 2px rgba(40,30,15,.05)}}
+.items details summary{list-style:none;display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer}
+.items details summary::-webkit-details-marker{display:none}
+.dot{width:9px;height:9px;border-radius:50%;flex:none;background:var(--ink-3);opacity:.35}
+.dot.ok{background:var(--ok);opacity:1} .dot.mid{background:var(--mid);opacity:1}
+.items .t{flex:1;min-width:0}
+.items .t b{display:block;font-size:.95rem;word-break:break-word}
+.items .t small{color:var(--ink-3);font-size:.72rem}
+.items .d{padding:0 14px 14px 33px;color:var(--ink-2);font-size:.9rem}
+.empty{text-align:center;color:var(--ink-3);padding:40px 0}
+
+/* data */
+.kv{display:flex;justify-content:space-between;gap:10px;font-size:.9rem;padding:4px 0}
+.kv span{color:var(--ink-3)}
+.file{position:relative;overflow:hidden}
+.file input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+.ok-text{color:var(--ok)} .ng-text{color:var(--ng)}
+.ver{text-align:center;color:var(--ink-3);font-size:.72rem;margin:18px 0 0}
+
+/* sheet (category picker) */
+.overlay{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.38);display:flex;align-items:flex-end;justify-content:center;animation:fade .15s ease}
+.sheet{background:var(--bg);width:100%;max-width:560px;max-height:86vh;max-height:86dvh;border-radius:22px 22px 0 0;display:flex;flex-direction:column;animation:up .22s cubic-bezier(.2,.8,.2,1)}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 8px}
+.sheet-head h3{margin:0;font-size:1.05rem}
+.sheet-head button{border:0;background:transparent;color:var(--accent);font-weight:700;font-size:1rem;padding:6px}
+.sheet-body{overflow-y:auto;padding:4px 18px 18px;-webkit-overflow-scrolling:touch}
+.quick{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.quick button{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:10px;font-size:.85rem;font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:8px 12px;font-size:.82rem;font-weight:600;color:var(--ink-2)}
+.chip i{font-style:normal;color:var(--ink-3);margin-left:4px;font-weight:500}
+.chip.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chip.on i{color:var(--accent-ink);opacity:.8}
+.sheet-foot{padding:10px 18px calc(14px + env(safe-area-inset-bottom));border-top:1px solid var(--line)}
+.sheet-foot .btn{margin:0}
+@keyframes fade{from{opacity:0}} @keyframes up{from{transform:translateY(40px);opacity:.6}}
+
+/* study */
+#study{position:fixed;inset:0;z-index:10;background:var(--bg);display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom)}
+.s-top{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:8px;padding:10px 12px 6px;max-width:560px;width:100%;margin:0 auto}
+.icon{width:44px;height:44px;border:0;border-radius:12px;background:transparent;display:grid;place-items:center;color:var(--ink-2)}
+.icon svg{width:22px;height:22px}
+.icon:disabled{opacity:.25}
+.s-prog{text-align:center}
+.s-count{font-size:.8rem;font-weight:700;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.bar{height:5px;background:var(--surface-2);border-radius:9px;overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:9px;transition:width .25s ease}
+.s-body{flex:1;overflow-y:auto;padding:8px 16px 12px;max-width:560px;width:100%;margin:0 auto;display:flex;flex-direction:column;-webkit-overflow-scrolling:touch}
+.flash{position:relative;flex:1;min-height:320px;background:var(--surface);border-radius:24px;box-shadow:var(--shadow);border:1px solid var(--line);padding:22px 20px;display:flex;flex-direction:column;touch-action:pan-y;user-select:none;-webkit-user-select:none;will-change:transform}
+@media (prefers-color-scheme:light){.flash{border-color:transparent}}
+.flash.anim{transition:transform .22s ease,opacity .22s ease}
+.f-meta{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tag{font-size:.72rem;font-weight:700;color:var(--accent);background:var(--accent-soft);padding:4px 10px;border-radius:99px;max-width:72%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lv{font-size:.72rem;color:var(--ink-3);font-weight:600;white-space:nowrap}
+.f-q-label,.f-a-label{font-size:.75rem;color:var(--ink-3);font-weight:600;margin-top:22px}
+.f-q{margin-top:6px;word-break:break-word}
+.is-name{font-size:1.55rem;font-weight:800;line-height:1.35;letter-spacing:.01em}
+.is-desc{font-size:1.08rem;font-weight:500;line-height:1.75}
+.f-a{margin-top:auto;padding-top:18px}
+.flash.revealed .f-a{border-top:1px dashed var(--line);margin-top:22px}
+.f-a .is-name,.f-a .is-desc{margin-top:6px;word-break:break-word}
+.f-hint{text-align:center;color:var(--ink-3);font-size:.85rem;padding:10px 0}
+.stamp{position:absolute;top:18px;padding:4px 12px;border-radius:10px;font-weight:800;font-size:1rem;opacity:0;border:2px solid;pointer-events:none}
+.stamp.ok{right:18px;color:var(--ok);border-color:var(--ok);transform:rotate(8deg)}
+.stamp.ng{left:18px;color:var(--ng);border-color:var(--ng);transform:rotate(-8deg)}
+.swipe-hint{text-align:center;font-size:.72rem;color:var(--ink-3);margin-top:10px}
+.s-actions{display:flex;gap:10px;padding:8px 16px 14px;max-width:560px;width:100%;margin:0 auto}
+.s-actions .btn{margin:0}
+.btn.ok{background:var(--ok);color:#fff} .btn.ng{background:var(--ng);color:#fff}
+@media (prefers-color-scheme:dark){.btn.ok,.btn.ng{color:#0f1112}}
+.result .res-num{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:6px 0 18px}
+.result .res-num div{background:var(--surface);border-radius:18px;padding:18px;text-align:center;box-shadow:var(--shadow)}
+.result .res-num b{display:block;font-size:2.2rem;line-height:1.1;font-variant-numeric:tabular-nums}
+.result .res-num span{font-size:.78rem;color:var(--ink-3)}
+.result .res-num div:first-child b{color:var(--ok)} .result .res-num div:last-child b{color:var(--ng)}
+.result h3{font-size:.85rem;color:var(--ink-2);margin:0 0 8px}
+.res-list{list-style:none;margin:0;padding:0}
+.res-list li{background:var(--surface);border-radius:14px;padding:12px 14px;margin-bottom:8px}
+.res-list b{display:block;font-size:.95rem}
+.res-list span{font-size:.85rem;color:var(--ink-2)}
+.s-actions.col{flex-direction:column}
+
+/* toast */
+#toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(10px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:.85rem;font-weight:600;opacity:0;pointer-events:none;transition:all .2s ease;z-index:40;max-width:calc(100% - 32px);text-align:center}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.loading{padding:80px 0;text-align:center;color:var(--ink-3)}
+</style>
+</head>
+<body>
+<main class="wrap" id="view"><div class="loading">読み込み中…</div></main>
+
+<nav id="tabs" aria-label="メニュー"><div class="in">
+  <button data-act="tab" data-v="study" class="on">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="14" height="14" rx="3"/><path d="M7 3h11a3 3 0 0 1 3 3v11"/></svg>学習</button>
+  <button data-act="tab" data-v="list">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/></svg>単語一覧</button>
+  <button data-act="tab" data-v="data">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>データ</button>
+</div></nav>
+
+<section id="study" hidden></section>
+<div id="sheet" hidden></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+'use strict';
+const VERSION = '1.0.0';
+const CACHE_NAME = 'clf-cards-v1';
+const DAY = 86400000;
+const INTERVALS = [0, 1, 3, 7, 14, 30, 60];   // 箱ごとの次回出題までの日数
+const MASTER = 3;                              // この箱以上を「習得」とみなす
+const K = { progress:'clf.progress.v1', settings:'clf.settings.v1', custom:'clf.customDeck.v1', hint:'clf.hint.v1' };
+
+/* ---------- storage ---------- */
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){} }
+};
+
+/* ---------- state ---------- */
+let deck = [], deckMap = new Map(), cats = [], deckLabel = '', loadError = '';
+let progress = store.get(K.progress, {}) || {};
+let settings = Object.assign({ dir:'n2d', cats:[], size:20, order:'book' }, store.get(K.settings, {}) || {});
+let tab = 'study';
+let listState = { q:'', st:'all' };
+let S = null;          // study session
+let sheetCats = null;  // category selection being edited
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const startOfDay = t => { const d = new Date(t); d.setHours(0,0,0,0); return d.getTime(); };
+const shuffle = a => { for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+const saveProgress = () => { if(!store.set(K.progress, progress)) toast('記録を保存できませんでした'); };
+const saveSettings = () => store.set(K.settings, settings);
+
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+/* ---------- CSV ---------- */
+function parseCSV(text){
+  text = String(text).replace(/^﻿/, '');
+  const rows = []; let row = [], f = '', q = false;
+  for(let i=0;i<text.length;i++){
+    const c = text[i];
+    if(q){
+      if(c === '"'){ if(text[i+1] === '"'){ f += '"'; i++; } else q = false; }
+      else f += c;
+    }else if(c === '"') q = true;
+    else if(c === ',') { row.push(f); f = ''; }
+    else if(c === '\n' || c === '\r'){
+      if(c === '\r' && text[i+1] === '\n') i++;
+      row.push(f); rows.push(row); row = []; f = '';
+    }else f += c;
+  }
+  if(f !== '' || row.length){ row.push(f); rows.push(row); }
+  return rows;
+}
+function csvToDeck(text){
+  let rows = parseCSV(text).map(r => r.map(s => s.trim())).filter(r => r.some(Boolean));
+  if(!rows.length) throw new Error('空のファイルです');
+  if(/^(名称|名前|用語|単語|name|term)$/i.test(rows[0][0] || '')) rows = rows.slice(1);
+  const seen = new Set(), out = [];
+  for(const r of rows){
+    let name, cat, desc;
+    if(r.length >= 3){ [name, cat, desc] = r; }
+    else if(r.length === 2){ [name, desc] = r; cat = ''; }
+    else continue;
+    if(!name || !desc || seen.has(name)) continue;
+    seen.add(name);
+    out.push({ name, cat: cat || '未分類', desc });
+  }
+  if(!out.length) throw new Error('読み込める行がありませんでした（名称・分類・説明文の3列が必要です）');
+  return out;
+}
+function setDeck(list, label){
+  deck = list; deckLabel = label;
+  deckMap = new Map(deck.map(w => [w.name, w]));
+  cats = []; const seen = new Set();
+  for(const w of deck) if(!seen.has(w.cat)){ seen.add(w.cat); cats.push(w.cat); }
+  settings.cats = settings.cats.filter(c => seen.has(c));
+}
+async function loadDeck(){
+  const custom = store.get(K.custom, null);
+  if(custom && custom.text){
+    try{ setDeck(csvToDeck(custom.text), custom.label || '読み込んだCSV'); return; }
+    catch(e){ store.del(K.custom); }
+  }
+  try{
+    const res = await fetch('words.csv');
+    if(!res.ok) throw new Error(res.status);
+    setDeck(csvToDeck(await res.text()), 'AWS CLF 単語リスト');
+  }catch(e){
+    loadError = '単語データを読み込めませんでした。一度、通信できる状態で開き直してください。';
+  }
+}
+
+/* ---------- learning logic ---------- */
+const rec = name => progress[name];
+function statusOf(name){ const r = rec(name); return !r ? 'new' : (r.b >= MASTER ? 'ok' : 'mid'); }
+function isDue(name, now){ const r = rec(name); return !!r && r.d <= now; }
+function inScope(w){ return !settings.cats.length || settings.cats.includes(w.cat); }
+
+function plan(pool, size){
+  const now = Date.now();
+  const due = shuffle(pool.filter(w => isDue(w.name, now))).sort((a,b) => rec(a.name).b - rec(b.name).b);
+  const fresh = pool.filter(w => !rec(w.name)); if(settings.order === 'random') shuffle(fresh);
+  const later = pool.filter(w => rec(w.name) && !isDue(w.name, now)).sort((a,b) => (rec(a.name).b - rec(b.name).b) || (rec(a.name).d - rec(b.name).d));
+  const n = size === 0 ? pool.length : Math.min(size, pool.length);
+  const picked = [...due, ...fresh, ...later].slice(0, n);
+  const nDue = Math.min(due.length, n), nFresh = Math.min(fresh.length, n - nDue);
+  return { picked, nDue, nFresh, nLater: picked.length - nDue - nFresh };
+}
+function startSession(words){
+  if(!words.length){ toast('出題できる用語がありません'); return; }
+  S = {
+    queue: words.map(w => ({ name: w.name, dir: settings.dir === 'mix' ? (Math.random() < .5 ? 'n2d' : 'd2n') : settings.dir, re: 0 })),
+    i: 0, revealed: false, failed: [], history: [], unique: words.length
+  };
+  $('#study').hidden = false; document.body.style.overflow = 'hidden';
+  renderStudy();
+}
+function endSession(){ S = null; $('#study').hidden = true; document.body.style.overflow = ''; render(); }
+
+function answer(ok){
+  if(!S || !S.revealed) return;
+  const card = S.queue[S.i], name = card.name, now = Date.now();
+  S.history.push({ snap: JSON.stringify({ queue:S.queue, i:S.i, failed:S.failed }), name, rec: rec(name) ? { ...rec(name) } : null });
+  if(S.history.length > 50) S.history.shift();
+  const prev = rec(name), wasDue = !prev || prev.d <= now;
+  const r = prev ? { ...prev } : { b:0, d:0, n:0, ok:0, ng:0 };
+  r.n++; r.l = now;
+  if(ok){
+    r.ok++;
+    if(S.failed.includes(name)) r.b = 1;
+    else if(wasDue) r.b = Math.min(r.b + 1, INTERVALS.length - 1);
+    else r.b = Math.max(r.b, 1);
+    r.d = Math.max(wasDue ? 0 : r.d, startOfDay(now) + INTERVALS[r.b] * DAY);
+  }else{
+    r.ng++; r.b = 0; r.d = now;
+    if(!S.failed.includes(name)) S.failed.push(name);
+    if(card.re < 3){ const pos = Math.min(S.i + 4, S.queue.length); S.queue.splice(pos, 0, { ...card, re: card.re + 1 }); }
+  }
+  progress[name] = r; saveProgress();
+  S.i++; S.revealed = false;
+  renderStudy();
+}
+function undo(){
+  if(!S || !S.history.length) return;
+  const h = S.history.pop(), snap = JSON.parse(h.snap);
+  S.queue = snap.queue; S.i = snap.i; S.failed = snap.failed; S.revealed = true;
+  if(h.rec) progress[h.name] = h.rec; else delete progress[h.name];
+  saveProgress(); renderStudy();
+}
+
+/* ---------- views ---------- */
+function stats(list){
+  let ok = 0, mid = 0, nw = 0, due = 0; const now = Date.now();
+  for(const w of list){ const s = statusOf(w.name); if(s === 'ok') ok++; else if(s === 'mid') mid++; else nw++; if(isDue(w.name, now)) due++; }
+  return { ok, mid, nw, due, total: list.length };
+}
+const pct = (a, b) => b ? (a / b * 100).toFixed(2) + '%' : '0%';
+function stackBar(s, cls = 'stack'){
+  return `<div class="${cls}"><i class="c-ok" style="width:${pct(s.ok,s.total)}"></i><i class="c-mid" style="width:${pct(s.mid,s.total)}"></i></div>`;
+}
+function seg(key, opts){
+  return `<div class="seg" role="group">${opts.map(([v, l]) => `<button data-act="set" data-k="${key}" data-v="${v}" class="${String(settings[key]) === String(v) ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+}
+function scopeLabel(){
+  if(!settings.cats.length) return 'すべての分類';
+  if(settings.cats.length === 1) return settings.cats[0];
+  const names = { cust:'顧客の責任', aws:'AWSの責任', type:'サービスの型', idea:'概念' };
+  const cur = settings.cats.slice().sort().join('\n');
+  for(const k in names){ if(cats.filter(QUICK[k]).sort().join('\n') === cur) return `${names[k]}（${settings.cats.length}分類）`; }
+  return `${settings.cats[0]} ほか${settings.cats.length - 1}件`;
+}
+
+function homeHTML(){
+  const all = stats(deck);
+  const pool = deck.filter(inScope);
+  const p = plan(pool, settings.size);
+  const parts = [];
+  if(p.nDue) parts.push(`復習 ${p.nDue}`); if(p.nFresh) parts.push(`新出 ${p.nFresh}`); if(p.nLater) parts.push(`先取り ${p.nLater}`);
+  const catRows = cats.map((c, idx) => {
+    const s = stats(deck.filter(w => w.cat === c));
+    return `<li><button data-act="cat-study" data-i="${idx}"><span class="nm">${esc(c)}</span><span class="ct">${s.ok}/${s.total}</span>${stackBar(s, 'mini')}</button></li>`;
+  }).join('');
+  return `
+  <header class="top"><h1>CLF単語帳</h1><span class="sub">${esc(deckLabel)}</span></header>
+  <section class="card">
+    <div class="sum-main">
+      <div><div class="sum-big">${all.ok}<small>/ ${all.total}</small></div><div class="sum-label">習得した用語</div></div>
+      <div class="sum-today"><b>${all.due}</b><span>今日の復習</span></div>
+    </div>
+    ${stackBar(all)}
+    <div class="legend"><span class="c-ok" style="background:none">習得 ${all.ok}</span><span class="c-mid" style="background:none">学習中 ${all.mid}</span><span class="c-new" style="background:none">未学習 ${all.nw}</span></div>
+  </section>
+  <section class="card">
+    <h2>出題の設定</h2>
+    <div class="row"><div class="row-label">出題の向き</div>${seg('dir', [['n2d','名称→説明'],['d2n','説明→名称'],['mix','ミックス']])}</div>
+    <div class="row"><div class="row-label">範囲</div><button class="pick" data-act="cats-open"><span>${esc(scopeLabel())}</span><em>${pool.length}語 ›</em></button></div>
+    <div class="row"><div class="row-label">出題数</div>${seg('size', [[10,'10'],[20,'20'],[50,'50'],[0,'全部']])}</div>
+    <div class="row"><div class="row-label">新出の順番</div>${seg('order', [['book','章の順'],['random','ランダム']])}</div>
+    <button class="btn primary" data-act="start" ${p.picked.length ? '' : 'disabled'}>学習をはじめる（${p.picked.length}枚）</button>
+    <div class="start-meta">${parts.length ? parts.join('・') : '出題できる用語がありません'}</div>
+  </section>
+  <section class="card">
+    <h2>分類別の習得状況</h2>
+    <p class="note" style="margin:-6px 0 10px">タップすると、その分類だけで学習を始めます</p>
+    <ul class="cats">${catRows}</ul>
+  </section>`;
+}
+
+function listHTML(){
+  return `
+  <header class="top"><h1>単語一覧</h1><span class="sub">${deck.length}語</span></header>
+  <div class="search">
+    <input type="search" id="q" placeholder="名称・説明・分類で検索" value="${esc(listState.q)}" autocomplete="off">
+    <div class="seg">${[['all','すべて'],['new','未学習'],['mid','学習中'],['ok','習得']].map(([v,l]) => `<button data-act="list-st" data-v="${v}" class="${listState.st === v ? 'on' : ''}">${l}</button>`).join('')}</div>
+  </div>
+  <div id="listBody"></div>`;
+}
+function renderListBody(){
+  const q = listState.q.trim().toLowerCase();
+  const items = deck.filter(w => (listState.st === 'all' || statusOf(w.name) === listState.st) &&
+    (!q || (w.name + '\n' + w.desc + '\n' + w.cat).toLowerCase().includes(q)));
+  const lab = { ok:'習得', mid:'学習中', new:'未学習' };
+  $('#listBody').innerHTML = items.length ? `<div class="count">${items.length}件</div><ul class="items">${items.map(w => {
+    const s = statusOf(w.name);
+    return `<li><details><summary><i class="dot ${s}"></i><span class="t"><b>${esc(w.name)}</b><small>${esc(w.cat)} ・ ${lab[s]}</small></span></summary><div class="d">${esc(w.desc)}</div></details></li>`;
+  }).join('')}</ul>` : `<div class="empty">該当する用語はありません</div>`;
+}
+
+function dataHTML(){
+  const all = stats(deck);
+  const custom = store.get(K.custom, null);
+  const answered = Object.values(progress).reduce((a, r) => a + (r.n || 0), 0);
+  return `
+  <header class="top"><h1>データ</h1></header>
+  <section class="card">
+    <h2>単語データ</h2>
+    <div class="kv"><span>使用中</span><b>${esc(deckLabel)}</b></div>
+    <div class="kv"><span>用語数</span><b>${deck.length}語</b></div>
+    <label class="btn ghost small file">CSVを読み込む<input type="file" accept=".csv,text/csv,text/plain" data-file="csv"></label>
+    ${custom ? `<button class="btn ghost small" data-act="reset-deck">内蔵の単語リストに戻す</button>` : ''}
+    <p class="note">「名称・分類・説明文」の3列のCSVに対応しています（1行目の見出しは自動で読み飛ばします）。学習記録は名称で紐づくので、同じ名称の用語は記録が引き継がれます。</p>
+  </section>
+  <section class="card">
+    <h2>学習記録</h2>
+    <div class="kv"><span>習得 / 学習中 / 未学習</span><b>${all.ok} / ${all.mid} / ${all.nw}</b></div>
+    <div class="kv"><span>これまでの回答数</span><b>${answered}回</b></div>
+    <button class="btn ghost small" data-act="export">バックアップを書き出す</button>
+    <label class="btn ghost small file">バックアップから復元<input type="file" accept=".json,application/json" data-file="backup"></label>
+    <button class="btn danger small" data-act="reset-progress">学習記録をリセット</button>
+    <p class="note">記録はこのiPhoneの中だけに保存されます。機種変更や念のための保管には、バックアップを「ファイル」に保存しておいてください。</p>
+  </section>
+  <section class="card">
+    <h2>オフライン</h2>
+    <p id="offline" style="margin:0;font-weight:600">確認中…</p>
+    <p class="note">Safariで開き、共有ボタン →「ホーム画面に追加」で、アプリとして起動できます。単語データを更新したときは、一度通信できる状態で開くと次回から反映されます。</p>
+  </section>
+  <p class="ver">CLF単語帳 v${VERSION}</p>`;
+}
+async function checkOffline(){
+  const el = $('#offline'); if(!el) return;
+  if(!('serviceWorker' in navigator) || !window.caches){ el.textContent = 'このブラウザはオフライン起動に対応していません'; return; }
+  try{
+    const reg = await navigator.serviceWorker.getRegistration();
+    const hit = await caches.match('words.csv', { ignoreSearch:true });
+    if(reg && reg.active && hit){ el.innerHTML = '<span class="ok-text">準備完了：通信なしでも起動できます</span>'; }
+    else el.textContent = '準備中です。少し待ってから開き直してください';
+  }catch(e){ el.textContent = '確認できませんでした'; }
+}
+
+function render(){
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.v === tab));
+  const v = $('#view');
+  if(!deck.length){ v.innerHTML = `<div class="loading">${esc(loadError || '読み込み中…')}</div>`; return; }
+  if(tab === 'study') v.innerHTML = homeHTML();
+  else if(tab === 'list'){ v.innerHTML = listHTML(); renderListBody(); }
+  else { v.innerHTML = dataHTML(); checkOffline(); }
+}
+
+/* ---------- study screen ---------- */
+const ICON_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+const ICON_UNDO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>';
+
+function renderStudy(){
+  const el = $('#study');
+  if(S.i >= S.queue.length){ el.innerHTML = resultHTML(); return; }
+  const c = S.queue[S.i], w = deckMap.get(c.name);
+  if(!w){ S.i++; renderStudy(); return; }
+  const r = rec(c.name);
+  const lv = !r ? '初見' : (S.failed.includes(c.name) ? 'やり直し' : `レベル ${r.b}`);
+  const qName = c.dir === 'n2d';
+  const showHint = S.revealed && !store.get(K.hint, false);
+  el.innerHTML = `
+  <header class="s-top">
+    <button class="icon" data-act="quit" aria-label="終了">${ICON_X}</button>
+    <div class="s-prog"><div class="s-count">${S.i + 1} / ${S.queue.length}</div><div class="bar"><i style="width:${pct(S.i, S.queue.length)}"></i></div></div>
+    <button class="icon" data-act="undo" aria-label="ひとつ戻す" ${S.history.length ? '' : 'disabled'}>${ICON_UNDO}</button>
+  </header>
+  <div class="s-body">
+    <article class="flash ${S.revealed ? 'revealed' : ''}" id="flash" ${S.revealed ? '' : 'data-act="reveal"'}>
+      <div class="f-meta"><span class="tag">${esc(w.cat)}</span><span class="lv">${lv}</span></div>
+      <div class="f-q-label">${qName ? 'この用語を説明すると？' : 'この説明に当てはまるのは？'}</div>
+      <div class="f-q ${qName ? 'is-name' : 'is-desc'}">${esc(qName ? w.name : w.desc)}</div>
+      <div class="f-a">${S.revealed
+        ? `<div class="f-a-label">答え</div><div class="${qName ? 'is-desc' : 'is-name'}">${esc(qName ? w.desc : w.name)}</div>`
+        : `<div class="f-hint">タップで答えを表示</div>`}</div>
+      <div class="stamp ok">覚えた</div><div class="stamp ng">まだ</div>
+    </article>
+    ${showHint ? '<div class="swipe-hint">カードを右にスワイプで「覚えた」、左で「まだ」</div>' : ''}
+  </div>
+  <footer class="s-actions">${S.revealed
+    ? `<button class="btn ng" data-act="ng">まだ</button><button class="btn ok" data-act="ok">覚えた</button>`
+    : `<button class="btn primary" data-act="reveal">答えを見る</button>`}</footer>`;
+  bindSwipe();
+}
+function resultHTML(){
+  const ng = S.failed.filter(n => deckMap.has(n));
+  const okFirst = Math.max(0, S.unique - ng.length);
+  return `
+  <header class="s-top"><span></span><div class="s-count" style="text-align:center">おつかれさまでした</div><span></span></header>
+  <div class="s-body result">
+    <div class="res-num"><div><b>${okFirst}</b><span>一発で正解</span></div><div><b>${ng.length}</b><span>つまずいた</span></div></div>
+    ${ng.length
+      ? `<h3>つまずいた用語</h3><ul class="res-list">${ng.map(n => `<li><b>${esc(n)}</b><span>${esc(deckMap.get(n).desc)}</span></li>`).join('')}</ul>`
+      : `<p class="muted center">全部一発で正解でした。</p>`}
+  </div>
+  <footer class="s-actions col">
+    ${ng.length ? `<button class="btn ghost" data-act="retry">つまずいた用語だけもう一度</button>` : ''}
+    <button class="btn primary" data-act="finish">終了</button>
+  </footer>`;
+}
+function bindSwipe(){
+  const card = $('#flash'); if(!card || !S.revealed) return;
+  let x0 = 0, y0 = 0, dx = 0, active = false, horiz = null;
+  const okS = card.querySelector('.stamp.ok'), ngS = card.querySelector('.stamp.ng');
+  card.addEventListener('touchstart', e => { const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; dx = 0; active = true; horiz = null; card.classList.remove('anim'); }, { passive:true });
+  card.addEventListener('touchmove', e => {
+    if(!active) return;
+    const t = e.touches[0]; dx = t.clientX - x0; const dy = t.clientY - y0;
+    if(horiz === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) horiz = Math.abs(dx) > Math.abs(dy);
+    if(!horiz) return;
+    card.style.transform = `translateX(${dx}px) rotate(${dx / 24}deg)`;
+    okS.style.opacity = Math.max(0, Math.min(1, dx / 90)); ngS.style.opacity = Math.max(0, Math.min(1, -dx / 90));
+  }, { passive:true });
+  card.addEventListener('touchend', () => {
+    if(!active) return; active = false;
+    card.classList.add('anim');
+    if(horiz && Math.abs(dx) > 90){
+      const ok = dx > 0;
+      card.style.transform = `translateX(${ok ? 140 : -140}%) rotate(${ok ? 14 : -14}deg)`; card.style.opacity = '0';
+      store.set(K.hint, true);
+      setTimeout(() => answer(ok), 180);
+    }else{ card.style.transform = ''; okS.style.opacity = 0; ngS.style.opacity = 0; }
+  });
+}
+
+/* ---------- category sheet ---------- */
+function openSheet(){ sheetCats = settings.cats.slice(); renderSheet(); $('#sheet').hidden = false; }
+function closeSheet(apply){
+  if(apply){ settings.cats = sheetCats.length === cats.length ? [] : sheetCats; saveSettings(); }
+  sheetCats = null; $('#sheet').hidden = true; render();
+}
+const QUICK = {
+  cust: c => c.startsWith('顧客：') || /型（/.test(c),
+  aws:  c => c.startsWith('AWS：'),
+  type: c => /型（/.test(c),
+  idea: c => c === '概念'
+};
+function renderSheet(){
+  const sel = new Set(sheetCats);
+  const count = deck.filter(w => !sel.size || sel.has(w.cat)).length;
+  $('#sheet').innerHTML = `
+  <div class="overlay" data-act="sheet-bg"><div class="sheet" role="dialog" aria-label="出題範囲">
+    <div class="sheet-head"><h3>出題範囲</h3><button data-act="sheet-clear">すべて</button></div>
+    <div class="sheet-body">
+      <div class="quick">
+        <button data-act="quick" data-v="cust">顧客の責任</button>
+        <button data-act="quick" data-v="aws">AWSの責任</button>
+        <button data-act="quick" data-v="type">サービスの型</button>
+        <button data-act="quick" data-v="idea">概念</button>
+      </div>
+      <div class="chips">${cats.map((c, i) => `<button class="chip ${sel.has(c) ? 'on' : ''}" data-act="chip" data-i="${i}">${esc(c)}<i>${deck.filter(w => w.cat === c).length}</i></button>`).join('')}</div>
+    </div>
+    <div class="sheet-foot"><button class="btn primary" data-act="sheet-done">${sel.size ? `${sel.size}分類・${count}語で決定` : `すべて（${count}語）で決定`}</button></div>
+  </div></div>`;
+}
+
+/* ---------- backup ---------- */
+function ymd(){ const d = new Date(); return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`; }
+async function exportBackup(){
+  const data = { app:'clf-cards', version:VERSION, exportedAt:new Date().toISOString(), progress, settings, customDeck: store.get(K.custom, null) };
+  const name = `clf-backup-${ymd()}.json`;
+  const file = new File([JSON.stringify(data)], name, { type:'application/json' });
+  if(navigator.canShare && navigator.canShare({ files:[file] })){
+    try{ await navigator.share({ files:[file], title:'CLF単語帳 バックアップ' }); return; }
+    catch(e){ if(e && e.name === 'AbortError') return; }
+  }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+function readFile(input){
+  return new Promise((ok, ng) => {
+    const f = input.files && input.files[0]; if(!f) return ng(new Error('ファイルが選ばれていません'));
+    const fr = new FileReader(); fr.onload = () => ok({ text: fr.result, name: f.name }); fr.onerror = () => ng(fr.error); fr.readAsText(f, 'utf-8');
+  });
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-act]'); if(!t) return;
+  const act = t.dataset.act, v = t.dataset.v;
+  switch(act){
+    case 'tab': tab = v; window.scrollTo(0, 0); render(); break;
+    case 'set': settings[t.dataset.k] = t.dataset.k === 'size' ? Number(v) : v; saveSettings(); render(); break;
+    case 'start': startSession(plan(deck.filter(inScope), settings.size).picked); break;
+    case 'cat-study': {
+      const c = cats[Number(t.dataset.i)];
+      const pool = deck.filter(w => w.cat === c);
+      startSession(plan(pool, settings.size).picked); break;
+    }
+    case 'cats-open': openSheet(); break;
+    case 'sheet-bg': if(e.target === t) closeSheet(false); break;
+    case 'sheet-clear': sheetCats = []; renderSheet(); break;
+    case 'sheet-done': closeSheet(true); break;
+    case 'quick': sheetCats = cats.filter(QUICK[v]); renderSheet(); break;
+    case 'chip': {
+      const c = cats[Number(t.dataset.i)];
+      sheetCats = sheetCats.includes(c) ? sheetCats.filter(x => x !== c) : [...sheetCats, c];
+      renderSheet(); break;
+    }
+    case 'list-st': listState.st = v; document.querySelectorAll('[data-act="list-st"]').forEach(b => b.classList.toggle('on', b.dataset.v === v)); renderListBody(); break;
+    case 'reveal': if(S && !S.revealed){ S.revealed = true; renderStudy(); } break;
+    case 'ok': answer(true); break;
+    case 'ng': answer(false); break;
+    case 'undo': undo(); break;
+    case 'quit': endSession(); break;
+    case 'finish': endSession(); break;
+    case 'retry': { const ws = S.failed.map(n => deckMap.get(n)).filter(Boolean); startSession(ws); break; }
+    case 'export': exportBackup(); break;
+    case 'reset-deck':
+      if(confirm('内蔵の単語リストに戻しますか？（学習記録は残ります）')){ store.del(K.custom); deck = []; loadDeck().then(() => { render(); toast('内蔵の単語リストに戻しました'); }); }
+      break;
+    case 'reset-progress':
+      if(confirm('学習記録をすべて消去します。元に戻せません。よろしいですか？')){ progress = {}; saveProgress(); render(); toast('学習記録をリセットしました'); }
+      break;
+  }
+});
+document.addEventListener('input', e => {
+  if(e.target.id === 'q'){ listState.q = e.target.value; renderListBody(); }
+});
+document.addEventListener('change', async e => {
+  const kind = e.target.dataset && e.target.dataset.file; if(!kind) return;
+  try{
+    const { text, name } = await readFile(e.target);
+    if(kind === 'csv'){
+      const list = csvToDeck(text);
+      const label = name.replace(/\.(csv|txt)$/i, '');
+      if(!store.set(K.custom, { label, text })) throw new Error('保存できませんでした（容量不足の可能性があります）');
+      setDeck(list, label); saveSettings(); render(); toast(`${list.length}語を読み込みました`);
+    }else{
+      const data = JSON.parse(text);
+      if(!data || data.app !== 'clf-cards' || typeof data.progress !== 'object') throw new Error('このアプリのバックアップではありません');
+      if(!confirm('現在の学習記録を、バックアップの内容で置き換えます。よろしいですか？')) return;
+      progress = data.progress || {}; saveProgress();
+      if(data.settings) { settings = Object.assign(settings, data.settings); saveSettings(); }
+      if(data.customDeck && data.customDeck.text){ store.set(K.custom, data.customDeck); }
+      deck = []; await loadDeck(); render(); toast('バックアップから復元しました');
+    }
+  }catch(err){ toast(err && err.message ? err.message : '読み込みに失敗しました'); }
+  finally{ e.target.value = ''; }
+});
+document.addEventListener('keydown', e => {
+  if(!S || $('#study').hidden || e.target.tagName === 'INPUT') return;
+  if(S.i >= S.queue.length) return;
+  if(e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); if(!S.revealed){ S.revealed = true; renderStudy(); } }
+  else if(e.key === 'ArrowRight') answer(true);
+  else if(e.key === 'ArrowLeft') answer(false);
+  else if(e.key === 'Escape') endSession();
+});
+
+/* ---------- boot ---------- */
+(async () => {
+  await loadDeck();
+  render();
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+  if(navigator.storage && navigator.storage.persist){ navigator.storage.persist().catch(() => {}); }
+})();
+</script>
+</body>
+</html>
