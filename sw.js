@@ -1,5 +1,5 @@
 // CLF単語帳 オフライン用 Service Worker
-const CACHE_NAME = 'clf-cards-v1';
+const CACHE_NAME = 'clf-cards-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -10,8 +10,17 @@ const ASSETS = [
   './icon-512.png'
 ];
 
+// ブラウザのHTTPキャッシュを通さず、必ずサーバーの最新版を取りに行く
+const fresh = req => fetch(req.mode === 'navigate'
+  ? new Request(req.url, { cache: 'no-cache', credentials: 'same-origin' })
+  : new Request(req, { cache: 'no-cache' }));
+
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(c => c.addAll(ASSETS.map(u => new Request(u, { cache: 'reload' }))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', event => {
@@ -33,7 +42,7 @@ self.addEventListener('fetch', event => {
     const cache = await caches.open(CACHE_NAME);
     const key = req.mode === 'navigate' ? './index.html' : req;
     const cached = await cache.match(key, { ignoreSearch: true });
-    const network = fetch(req).then(res => {
+    const network = fresh(req).then(res => {
       if (res && res.ok) cache.put(key, res.clone());
       return res;
     }).catch(() => null);
