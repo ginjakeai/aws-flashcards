@@ -1,5 +1,5 @@
 // CLF単語帳 オフライン用 Service Worker
-const CACHE_NAME = 'clf-cards-v3';
+const CACHE_NAME = 'clf-cards-v4';
 const ASSETS = [
   './',
   './index.html',

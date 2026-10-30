@@ -148,13 +148,14 @@ button{cursor:pointer;touch-action:manipulation}
 .chip-head{width:100%;font-size:.75rem;color:var(--ink-3);font-weight:700;margin:14px 0 0}
 .chip-head:first-child{margin-top:0}
 .sheet-tabs{margin:2px 18px 4px}
+.sheet-tabs button{font-size:.8rem;padding:9px 2px}
 .sheet-hint{font-size:.75rem;color:var(--ink-3);margin:6px 18px 8px}
 .stat-seg{margin:-2px 0 12px}
 .ed-link{border:0;background:transparent;color:var(--accent);font-weight:700;font-size:.8rem;padding:6px 0 6px 12px;margin:-6px 0}
 .d .ed-link{display:block;margin:6px 0 -6px auto;padding:6px 0}
 .add-btn{margin:0 0 10px}
 .ed label{display:block;font-size:.78rem;color:var(--ink-3);font-weight:600;margin-bottom:12px}
-.ed input,.ed textarea{display:block;width:100%;margin-top:5px;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:11px 12px;font-size:16px;color:var(--ink);outline:none;font-weight:400;line-height:1.5}
+.ed input,.ed textarea,.ed select{display:block;width:100%;margin-top:5px;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:11px 12px;font-size:16px;color:var(--ink);outline:none;font-weight:400;line-height:1.5}
 .ed textarea{resize:vertical;min-height:96px}
 .ed input:focus,.ed textarea:focus{border-color:var(--accent)}
 .ed-err{color:var(--ng);font-size:.85rem;font-weight:600;margin:0;min-height:1em}
@@ -236,8 +237,8 @@ button{cursor:pointer;touch-action:manipulation}
 
 <script>
 'use strict';
-const VERSION = '1.2.0';
-const CACHE_NAME = 'clf-cards-v3';
+const VERSION = '1.3.0';
+const CACHE_NAME = 'clf-cards-v4';
 const DAY = 86400000;
 const INTERVALS = [0, 1, 3, 7, 14, 30, 60];   // 箱ごとの次回出題までの日数
 const MASTER = 3;                              // この箱以上を「習得」とみなす
@@ -251,12 +252,15 @@ const store = {
 };
 
 /* ---------- state ---------- */
-const AXES = [['cat', '分類'], ['chap', '章'], ['topic', 'トピック']];
+const AXES = [['imp', '重要度'], ['cat', '分類'], ['chap', '章'], ['topic', 'トピック']];
+const STAT_AXES = ['cat', 'chap', 'topic'];  // 重要度は絞り込み専用
+const IMP = { A:'A 頻出・必須', B:'B 標準', C:'C まれ' };
+const normImp = v => { v = String(v || '').trim().toUpperCase(); return IMP[v] ? v : ''; };
 let deck = [], deckMap = new Map(), deckLabel = '', loadError = '';
-let groups = { cat:[], chap:[], topic:[] };
+let groups = { imp:[], cat:[], chap:[], topic:[] };
 let progress = store.get(K.progress, {}) || {};
 let settings = Object.assign({ dir:'n2d', size:20, order:'book', statAxis:'cat' }, store.get(K.settings, {}) || {});
-settings.filter = Object.assign({ cat:[], chap:[], topic:[] }, settings.filter || {});
+settings.filter = Object.assign({ imp:[], cat:[], chap:[], topic:[] }, settings.filter || {});
 if(Array.isArray(settings.cats)){ if(!settings.filter.cat.length) settings.filter.cat = settings.cats; delete settings.cats; }
 const axisOn = k => groups[k].length > 0;
 let tab = 'study';
@@ -300,7 +304,8 @@ const COLS = {
   cat: /^(分類|カテゴリ|category)$/i,
   desc: /^(説明文|説明|意味|description|definition)$/i,
   chap: /^(章|chapter)$/i,
-  topic: /^(トピック|節|topic|section)$/i
+  topic: /^(トピック|節|topic|section)$/i,
+  imp: /^(重要度|importance|priority)$/i
 };
 function csvToDeck(text){
   let rows = parseCSV(text).map(r => r.map(s => s.trim())).filter(r => r.some(Boolean));
@@ -317,9 +322,9 @@ function csvToDeck(text){
     let w;
     if(idx){
       const g = k => idx[k] == null ? '' : (r[idx[k]] || '');
-      w = { name:g('name'), cat:g('cat'), desc:g('desc'), chap:g('chap'), topic:g('topic') };
-    }else if(r.length >= 3) w = { name:r[0], cat:r[1], desc:r[2], chap:r[3] || '', topic:r[4] || '' };
-    else if(r.length === 2) w = { name:r[0], cat:'', desc:r[1], chap:'', topic:'' };
+      w = { name:g('name'), cat:g('cat'), desc:g('desc'), chap:g('chap'), topic:g('topic'), imp:normImp(g('imp')) };
+    }else if(r.length >= 3) w = { name:r[0], cat:r[1], desc:r[2], chap:r[3] || '', topic:r[4] || '', imp:normImp(r[5]) };
+    else if(r.length === 2) w = { name:r[0], cat:'', desc:r[1], chap:'', topic:'', imp:'' };
     else continue;
     if(!w.name || !w.desc || seen.has(w.name)) continue;
     seen.add(w.name);
@@ -335,6 +340,7 @@ function setDeck(list, label){
   for(const [k] of AXES){
     const seen = new Set(); groups[k] = [];
     for(const w of deck) if(w[k] && !seen.has(w[k])){ seen.add(w[k]); groups[k].push(w[k]); }
+    if(k === 'imp') groups.imp.sort();
     settings.filter[k] = (settings.filter[k] || []).filter(v => seen.has(v));
   }
   if(!axisOn(settings.statAxis)) settings.statAxis = 'cat';
@@ -342,8 +348,22 @@ function setDeck(list, label){
 async function loadDeck(){
   const custom = store.get(K.custom, null);
   if(custom && custom.text){
-    try{ setDeck(csvToDeck(custom.text), custom.label || '読み込んだCSV'); return; }
-    catch(e){ store.del(K.custom); }
+    let list = null;
+    try{ list = csvToDeck(custom.text); }catch(e){ store.del(K.custom); }
+    if(list){
+      // 重要度の列がない保存データは、内蔵リストの重要度を名称で引き継ぐ
+      if(!list.some(w => w.imp)){
+        try{
+          const res = await fetch('words.csv');
+          const base = new Map(csvToDeck(await res.text()).map(w => [w.name, w.imp]));
+          list.forEach(w => { w.imp = base.get(w.name) || 'B'; });
+          setDeck(list, custom.label || '読み込んだCSV');
+          if(custom.edited) persistDeck();
+          return;
+        }catch(e){}
+      }
+      setDeck(list, custom.label || '読み込んだCSV'); return;
+    }
   }
   try{
     const res = await fetch('words.csv');
@@ -430,7 +450,8 @@ function seg(key, opts){
   return `<div class="seg" role="group">${opts.map(([v, l]) => `<button data-act="set" data-k="${key}" data-v="${v}" class="${String(settings[key]) === String(v) ? 'on' : ''}">${l}</button>`).join('')}</div>`;
 }
 const QUICK_NAMES = { cust:'顧客の責任', aws:'AWSの責任', type:'サービスの型', idea:'概念' };
-const shortOf = (k, v) => k === 'cat' ? v : v.split(' ')[0];
+const shortOf = (k, v) => k === 'cat' ? v : k === 'imp' ? '重要度' + v : v.split(' ')[0];
+const labelOf = (k, v) => k === 'imp' ? (IMP[v] || v) : v;
 function axisLabel(k, sel){
   if(k === 'cat' && sel.length > 1){
     const cur = sel.slice().sort().join('\n');
@@ -452,7 +473,7 @@ function homeHTML(){
   const parts = [];
   if(p.nDue) parts.push(`復習 ${p.nDue}`); if(p.nFresh) parts.push(`新出 ${p.nFresh}`); if(p.nLater) parts.push(`先取り ${p.nLater}`);
   const ax = settings.statAxis;
-  const statAxes = AXES.filter(([k]) => axisOn(k));
+  const statAxes = AXES.filter(([k]) => STAT_AXES.includes(k) && axisOn(k));
   const catRows = groups[ax].map((g, idx) => {
     const s = stats(deck.filter(w => w[ax] === g));
     return `<li><button data-act="grp-study" data-k="${ax}" data-i="${idx}"><span class="nm">${esc(g)}</span><span class="ct">${s.ok}/${s.total}</span>${stackBar(s, 'mini')}</button></li>`;
@@ -519,8 +540,8 @@ function dataHTML(){
     <button class="btn primary small" data-act="export-csv">CSVを書き出す</button>
     <label class="btn ghost small file">CSVを読み込む<input type="file" accept=".csv,text/csv,text/plain" data-file="csv"></label>
     ${custom ? `<button class="btn ghost small" data-act="reset-deck">内蔵の単語リストに戻す</button>` : ''}
-    <p class="note">用語の修正・追加は「単語一覧」から、学習中はカード右上の「編集」からできます。変更はこのiPhoneに保存されます。「CSVを書き出す」で、今の単語リストを「名称・分類・説明文・章・トピック」の5列のCSVとして保存・共有できます。</p>
-    <p class="note">読み込むCSVは同じ5列に対応しています（章・トピックは省略可、1行目の見出しで列を判断）。学習記録は名称で紐づくので、同じ名称の用語は記録が引き継がれます。</p>
+    <p class="note">用語の修正・追加は「単語一覧」から、学習中はカード右上の「編集」からできます。変更はこのiPhoneに保存されます。「CSVを書き出す」で、今の単語リストを「名称・分類・説明文・章・トピック・重要度」の6列のCSVとして保存・共有できます。</p>
+    <p class="note">読み込むCSVは同じ6列に対応しています（章・トピック・重要度は省略可、1行目の見出しで列を判断）。学習記録は名称で紐づくので、同じ名称の用語は記録が引き継がれます。</p>
   </section>
   <section class="card">
     <h2>学習記録</h2>
@@ -643,15 +664,15 @@ const QUICK = {
   type: c => /型（/.test(c),
   idea: c => c === '概念'
 };
-const emptyFilter = () => ({ cat:[], chap:[], topic:[] });
+const emptyFilter = () => ({ imp:[], cat:[], chap:[], topic:[] });
 function openSheet(){
-  sheetF = { cat:[...settings.filter.cat], chap:[...settings.filter.chap], topic:[...settings.filter.topic] };
+  sheetF = Object.fromEntries(AXES.map(([k]) => [k, [...settings.filter[k]]]));
   if(!axisOn(sheetAxis)) sheetAxis = 'cat';
   $('#sheet').innerHTML = `
   <div class="overlay" data-act="sheet-bg"><div class="sheet" role="dialog" aria-label="出題範囲">
     <div class="sheet-head"><h3>出題範囲</h3><button data-act="sheet-clear">クリア</button></div>
     <div class="seg sheet-tabs" id="sheetTabs"></div>
-    <p class="sheet-hint">分類・章・トピックで選んだ条件は、組み合わせて絞り込みます（例：第3章 × 顧客の責任）</p>
+    <p class="sheet-hint">重要度・分類・章・トピックで選んだ条件は、組み合わせて絞り込みます（例：重要度A × 第3章）</p>
     <div class="sheet-body" id="sheetBody"></div>
     <div class="sheet-foot" id="sheetFoot"></div>
   </div></div>`;
@@ -669,7 +690,7 @@ const countWith = f => deck.reduce((n, w) => n + (matches(w, f) ? 1 : 0), 0);
 function chipHTML(k, i){
   const v = groups[k][i], on = sheetF[k].includes(v);
   const n = countWith({ ...sheetF, [k]: [v] });
-  return `<button class="chip ${on ? 'on' : ''} ${n || on ? '' : 'zero'}" data-act="chip" data-k="${k}" data-i="${i}">${esc(v)}<i>${n}</i></button>`;
+  return `<button class="chip ${on ? 'on' : ''} ${n || on ? '' : 'zero'}" data-act="chip" data-k="${k}" data-i="${i}">${esc(labelOf(k, v))}<i>${n}</i></button>`;
 }
 function renderSheet(resetScroll){
   const body = $('#sheetBody'), st = body.scrollTop;
@@ -704,7 +725,7 @@ function renderSheet(resetScroll){
 /* ---------- editing ---------- */
 const csvCell = s => '"' + String(s == null ? '' : s).replace(/"/g, '""') + '"';
 function deckToCSV(list){
-  const rows = [['名称', '分類', '説明文', '章', 'トピック'], ...list.map(w => [w.name, w.cat, w.desc, w.chap, w.topic])];
+  const rows = [['名称', '分類', '説明文', '章', 'トピック', '重要度'], ...list.map(w => [w.name, w.cat, w.desc, w.chap, w.topic, w.imp])];
   return rows.map(r => r.map(csvCell).join(',')).join('\n') + '\n';
 }
 function persistDeck(){
@@ -718,7 +739,7 @@ function openEditor(name){
   const w = name ? deckMap.get(name) : null;
   if(name && !w) return;
   edName = w ? w.name : null;
-  const base = w || { name:'', cat:'', desc:'', chap: settings.filter.chap.length === 1 ? settings.filter.chap[0] : '', topic: settings.filter.topic.length === 1 ? settings.filter.topic[0] : '' };
+  const base = w || { name:'', cat:'', desc:'', chap: settings.filter.chap.length === 1 ? settings.filter.chap[0] : '', topic: settings.filter.topic.length === 1 ? settings.filter.topic[0] : '', imp:'B' };
   const f = (k, label, extra = '') => `<label>${label}<input name="${k}" value="${esc(base[k] || '')}" autocomplete="off" ${extra}></label>`;
   $('#editor').innerHTML = `
   <div class="overlay" data-act="ed-bg"><div class="sheet" role="dialog" aria-label="${w ? '用語を編集' : '用語を追加'}">
@@ -729,6 +750,7 @@ function openEditor(name){
       ${f('cat', '分類', 'list="dl-cat"')}
       ${f('chap', '章', 'list="dl-chap"')}
       ${f('topic', 'トピック', 'list="dl-topic"')}
+      <label>重要度<select name="imp">${['A', 'B', 'C'].map(v => `<option value="${v}" ${(base.imp || 'B') === v ? 'selected' : ''}>${IMP[v]}</option>`).join('')}</select></label>
       <datalist id="dl-cat">${opts(groups.cat)}</datalist>
       <datalist id="dl-chap">${opts(groups.chap)}</datalist>
       <datalist id="dl-topic">${opts(topicsOf(base.chap))}</datalist>
@@ -750,7 +772,7 @@ function closeEditor(changed){
 }
 function saveEditor(){
   const fd = new FormData($('#edForm'));
-  const w = {}; for(const k of ['name', 'cat', 'desc', 'chap', 'topic']) w[k] = String(fd.get(k) || '').trim();
+  const w = {}; for(const k of ['name', 'cat', 'desc', 'chap', 'topic', 'imp']) w[k] = String(fd.get(k) || '').trim();
   const err = m => { $('#edErr').textContent = m; };
   if(!w.name) return err('名称を入力してください');
   if(!w.desc) return err('説明文を入力してください');
