@@ -150,6 +150,17 @@ button{cursor:pointer;touch-action:manipulation}
 .sheet-tabs{margin:2px 18px 4px}
 .sheet-hint{font-size:.75rem;color:var(--ink-3);margin:6px 18px 8px}
 .stat-seg{margin:-2px 0 12px}
+.ed-link{border:0;background:transparent;color:var(--accent);font-weight:700;font-size:.8rem;padding:6px 0 6px 12px;margin:-6px 0}
+.d .ed-link{display:block;margin:6px 0 -6px auto;padding:6px 0}
+.add-btn{margin:0 0 10px}
+.ed label{display:block;font-size:.78rem;color:var(--ink-3);font-weight:600;margin-bottom:12px}
+.ed input,.ed textarea{display:block;width:100%;margin-top:5px;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:11px 12px;font-size:16px;color:var(--ink);outline:none;font-weight:400;line-height:1.5}
+.ed textarea{resize:vertical;min-height:96px}
+.ed input:focus,.ed textarea:focus{border-color:var(--accent)}
+.ed-err{color:var(--ng);font-size:.85rem;font-weight:600;margin:0;min-height:1em}
+.ed-foot{display:flex;gap:10px}
+.ed-foot .btn{margin:0}
+.ed-foot .danger{flex:0 0 30%}
 .f-topic{font-size:.75rem;color:var(--ink-3);margin-top:10px;font-weight:600}
 .sheet-foot{padding:10px 18px calc(14px + env(safe-area-inset-bottom));border-top:1px solid var(--line)}
 .sheet-foot .btn{margin:0}
@@ -220,12 +231,13 @@ button{cursor:pointer;touch-action:manipulation}
 
 <section id="study" hidden></section>
 <div id="sheet" hidden></div>
+<div id="editor" hidden></div>
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script>
 'use strict';
-const VERSION = '1.1.0';
-const CACHE_NAME = 'clf-cards-v2';
+const VERSION = '1.2.0';
+const CACHE_NAME = 'clf-cards-v3';
 const DAY = 86400000;
 const INTERVALS = [0, 1, 3, 7, 14, 30, 60];   // 箱ごとの次回出題までの日数
 const MASTER = 3;                              // この箱以上を「習得」とみなす
@@ -266,7 +278,7 @@ function toast(msg){
 
 /* ---------- CSV ---------- */
 function parseCSV(text){
-  text = String(text).replace(/^﻿/, '');
+  text = String(text).replace(/^\uFEFF/, '');
   const rows = []; let row = [], f = '', q = false;
   for(let i=0;i<text.length;i++){
     const c = text[i];
@@ -479,6 +491,7 @@ function listHTML(){
     <input type="search" id="q" placeholder="名称・説明・分類・章・トピックで検索" value="${esc(listState.q)}" autocomplete="off">
     <div class="seg">${[['all','すべて'],['new','未学習'],['mid','学習中'],['ok','習得']].map(([v,l]) => `<button data-act="list-st" data-v="${v}" class="${listState.st === v ? 'on' : ''}">${l}</button>`).join('')}</div>
   </div>
+  <button class="btn ghost small add-btn" data-act="ed-open">＋ 用語を追加</button>
   <div id="listBody"></div>`;
 }
 function renderListBody(){
@@ -489,7 +502,7 @@ function renderListBody(){
   $('#listBody').innerHTML = items.length ? `<div class="count">${items.length}件</div><ul class="items">${items.map(w => {
     const s = statusOf(w.name);
     const meta = [w.topic && shortOf('topic', w.topic), w.cat, lab[s]].filter(Boolean).map(esc).join(' ・ ');
-    return `<li><details><summary><i class="dot ${s}"></i><span class="t"><b>${esc(w.name)}</b><small>${meta}</small></span></summary><div class="d">${esc(w.desc)}${w.topic ? `<br><small class="muted">${esc(w.topic)}</small>` : ''}</div></details></li>`;
+    return `<li><details><summary><i class="dot ${s}"></i><span class="t"><b>${esc(w.name)}</b><small>${meta}</small></span></summary><div class="d">${esc(w.desc)}${w.topic ? `<br><small class="muted">${esc(w.topic)}</small>` : ''}<button class="ed-link" data-act="ed-open" data-n="${esc(w.name)}">編集</button></div></details></li>`;
   }).join('')}</ul>` : `<div class="empty">該当する用語はありません</div>`;
 }
 
@@ -501,11 +514,13 @@ function dataHTML(){
   <header class="top"><h1>データ</h1></header>
   <section class="card">
     <h2>単語データ</h2>
-    <div class="kv"><span>使用中</span><b>${esc(deckLabel)}</b></div>
+    <div class="kv"><span>使用中</span><b>${esc(deckLabel)}${custom && custom.edited ? '（編集済み）' : ''}</b></div>
     <div class="kv"><span>用語数</span><b>${deck.length}語</b></div>
+    <button class="btn primary small" data-act="export-csv">CSVを書き出す</button>
     <label class="btn ghost small file">CSVを読み込む<input type="file" accept=".csv,text/csv,text/plain" data-file="csv"></label>
     ${custom ? `<button class="btn ghost small" data-act="reset-deck">内蔵の単語リストに戻す</button>` : ''}
-    <p class="note">「名称・分類・説明文・章・トピック」の列のCSVに対応しています（章・トピックは省略可）。1行目の見出しで列を判断します。学習記録は名称で紐づくので、同じ名称の用語は記録が引き継がれます。</p>
+    <p class="note">用語の修正・追加は「単語一覧」から、学習中はカード右上の「編集」からできます。変更はこのiPhoneに保存されます。「CSVを書き出す」で、今の単語リストを「名称・分類・説明文・章・トピック」の5列のCSVとして保存・共有できます。</p>
+    <p class="note">読み込むCSVは同じ5列に対応しています（章・トピックは省略可、1行目の見出しで列を判断）。学習記録は名称で紐づくので、同じ名称の用語は記録が引き継がれます。</p>
   </section>
   <section class="card">
     <h2>学習記録</h2>
@@ -564,7 +579,7 @@ function renderStudy(){
   </header>
   <div class="s-body">
     <article class="flash ${S.revealed ? 'revealed' : ''}" id="flash" ${S.revealed ? '' : 'data-act="reveal"'}>
-      <div class="f-meta"><span class="tag">${esc(w.cat)}</span><span class="lv">${lv}</span></div>
+      <div class="f-meta"><span class="tag">${esc(w.cat)}</span><span class="lv">${lv}<button class="ed-link" data-act="ed-open" data-n="${esc(w.name)}">編集</button></span></div>
       ${w.topic ? `<div class="f-topic">${esc(w.topic)}</div>` : ''}
       <div class="f-q-label">${qName ? 'この用語を説明すると？' : 'この説明に当てはまるのは？'}</div>
       <div class="f-q ${qName ? 'is-name' : 'is-desc'}">${esc(qName ? w.name : w.desc)}</div>
@@ -686,6 +701,109 @@ function renderSheet(resetScroll){
   $('#sheetFoot').innerHTML = `<button class="btn primary" data-act="sheet-done" ${total ? '' : 'disabled'}>${!total ? '該当する用語がありません' : any ? `${total}語で決定` : `すべて（${total}語）で決定`}</button>`;
 }
 
+/* ---------- editing ---------- */
+const csvCell = s => '"' + String(s == null ? '' : s).replace(/"/g, '""') + '"';
+function deckToCSV(list){
+  const rows = [['名称', '分類', '説明文', '章', 'トピック'], ...list.map(w => [w.name, w.cat, w.desc, w.chap, w.topic])];
+  return rows.map(r => r.map(csvCell).join(',')).join('\n') + '\n';
+}
+function persistDeck(){
+  if(!store.set(K.custom, { label: deckLabel, text: deckToCSV(deck), edited: true })){ toast('保存できませんでした（容量不足の可能性があります）'); return false; }
+  return true;
+}
+let edName = null;  // 編集中の用語の名称（新規はnull）
+const opts = list => list.map(v => `<option value="${esc(v)}"></option>`).join('');
+function topicsOf(chap){ const s = new Set(); for(const w of deck) if(w.topic && (!chap || w.chap === chap)) s.add(w.topic); return [...s]; }
+function openEditor(name){
+  const w = name ? deckMap.get(name) : null;
+  if(name && !w) return;
+  edName = w ? w.name : null;
+  const base = w || { name:'', cat:'', desc:'', chap: settings.filter.chap.length === 1 ? settings.filter.chap[0] : '', topic: settings.filter.topic.length === 1 ? settings.filter.topic[0] : '' };
+  const f = (k, label, extra = '') => `<label>${label}<input name="${k}" value="${esc(base[k] || '')}" autocomplete="off" ${extra}></label>`;
+  $('#editor').innerHTML = `
+  <div class="overlay" data-act="ed-bg"><div class="sheet" role="dialog" aria-label="${w ? '用語を編集' : '用語を追加'}">
+    <div class="sheet-head"><h3>${w ? '用語を編集' : '用語を追加'}</h3><button data-act="ed-cancel">キャンセル</button></div>
+    <form class="sheet-body ed" id="edForm" onsubmit="return false">
+      ${f('name', '名称')}
+      <label>説明文<textarea name="desc" rows="4">${esc(base.desc || '')}</textarea></label>
+      ${f('cat', '分類', 'list="dl-cat"')}
+      ${f('chap', '章', 'list="dl-chap"')}
+      ${f('topic', 'トピック', 'list="dl-topic"')}
+      <datalist id="dl-cat">${opts(groups.cat)}</datalist>
+      <datalist id="dl-chap">${opts(groups.chap)}</datalist>
+      <datalist id="dl-topic">${opts(topicsOf(base.chap))}</datalist>
+      <p class="ed-err" id="edErr"></p>
+      ${w ? `<p class="note" style="margin:0">名称を変えても、この用語の学習記録は引き継がれます。</p>` : ''}
+    </form>
+    <div class="sheet-foot ed-foot">${w ? '<button class="btn danger" data-act="ed-delete">削除</button>' : ''}<button class="btn primary" data-act="ed-save">保存</button></div>
+  </div></div>`;
+  $('#editor').hidden = false; document.body.style.overflow = 'hidden';
+}
+function closeEditor(changed){
+  $('#editor').hidden = true; $('#editor').innerHTML = ''; edName = null;
+  if(!S) document.body.style.overflow = '';
+  if(!changed) return;
+  if(S){ renderStudy(); return; }
+  const y = window.scrollY;
+  render();
+  window.scrollTo(0, y);
+}
+function saveEditor(){
+  const fd = new FormData($('#edForm'));
+  const w = {}; for(const k of ['name', 'cat', 'desc', 'chap', 'topic']) w[k] = String(fd.get(k) || '').trim();
+  const err = m => { $('#edErr').textContent = m; };
+  if(!w.name) return err('名称を入力してください');
+  if(!w.desc) return err('説明文を入力してください');
+  if(w.name !== edName && deckMap.has(w.name)) return err('同じ名称の用語がすでにあります');
+  w.cat = w.cat || '未分類';
+  const old = edName;
+  if(old){
+    const i = deck.findIndex(x => x.name === old);
+    deck[i] = w;
+    if(w.name !== old){
+      if(progress[old]){ progress[w.name] = progress[old]; delete progress[old]; saveProgress(); }
+      if(S){ S.queue.forEach(c => { if(c.name === old) c.name = w.name; }); S.failed = S.failed.map(n => n === old ? w.name : n); S.history = []; }
+    }
+  }else{
+    let at = -1;
+    if(w.topic) deck.forEach((x, i) => { if(x.topic === w.topic) at = i; });
+    if(at < 0 && w.chap) deck.forEach((x, i) => { if(x.chap === w.chap) at = i; });
+    deck.splice(at < 0 ? deck.length : at + 1, 0, w);
+  }
+  setDeck(deck, deckLabel);
+  if(!persistDeck()) return;
+  saveSettings();
+  toast(old ? '保存しました' : '追加しました');
+  closeEditor(true);
+}
+function deleteEditor(){
+  const name = edName; if(!name) return;
+  if(!confirm(`「${name}」を削除しますか？`)) return;
+  deck = deck.filter(x => x.name !== name);
+  if(progress[name]){ delete progress[name]; saveProgress(); }
+  if(S){ S.history = []; }
+  setDeck(deck, deckLabel);
+  if(!persistDeck()) return;
+  saveSettings();
+  toast('削除しました');
+  closeEditor(true);
+}
+
+/* ---------- file share ---------- */
+async function shareFile(file, title){
+  if(navigator.canShare && navigator.canShare({ files:[file] })){
+    try{ await navigator.share({ files:[file], title }); return; }
+    catch(e){ if(e && e.name === 'AbortError') return; }
+  }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = file.name;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+function exportCSV(){
+  const file = new File(['\uFEFF' + deckToCSV(deck)], `clf-words-${ymd()}.csv`, { type:'text/csv' });
+  shareFile(file, 'CLF単語帳 単語リスト');
+}
+
 /* ---------- backup ---------- */
 function ymd(){ const d = new Date(); return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`; }
 async function exportBackup(){
@@ -739,8 +857,14 @@ document.addEventListener('click', e => {
     case 'finish': endSession(); break;
     case 'retry': { const ws = S.failed.map(n => deckMap.get(n)).filter(Boolean); startSession(ws); break; }
     case 'export': exportBackup(); break;
+    case 'export-csv': exportCSV(); break;
+    case 'ed-open': e.preventDefault(); e.stopPropagation(); openEditor(t.dataset.n || null); break;
+    case 'ed-bg': if(e.target === t) closeEditor(false); break;
+    case 'ed-cancel': closeEditor(false); break;
+    case 'ed-save': saveEditor(); break;
+    case 'ed-delete': deleteEditor(); break;
     case 'reset-deck':
-      if(confirm('内蔵の単語リストに戻しますか？（学習記録は残ります）')){ store.del(K.custom); deck = []; loadDeck().then(() => { render(); toast('内蔵の単語リストに戻しました'); }); }
+      if(confirm('内蔵の単語リストに戻しますか？アプリで編集・追加した内容は消えます（学習記録は残ります）。必要なら先に「CSVを書き出す」で保存してください。')){ store.del(K.custom); deck = []; loadDeck().then(() => { render(); toast('内蔵の単語リストに戻しました'); }); }
       break;
     case 'reset-progress':
       if(confirm('学習記録をすべて消去します。元に戻せません。よろしいですか？')){ progress = {}; saveProgress(); render(); toast('学習記録をリセットしました'); }
@@ -749,6 +873,7 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('input', e => {
   if(e.target.id === 'q'){ listState.q = e.target.value; renderListBody(); }
+  if(e.target.name === 'chap' && $('#dl-topic')){ $('#dl-topic').innerHTML = opts(topicsOf(e.target.value.trim())); }
 });
 document.addEventListener('change', async e => {
   const kind = e.target.dataset && e.target.dataset.file; if(!kind) return;
@@ -772,7 +897,7 @@ document.addEventListener('change', async e => {
   finally{ e.target.value = ''; }
 });
 document.addEventListener('keydown', e => {
-  if(!S || $('#study').hidden || e.target.tagName === 'INPUT') return;
+  if(!S || $('#study').hidden || !$('#editor').hidden || /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
   if(S.i >= S.queue.length) return;
   if(e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); if(!S.revealed){ S.revealed = true; renderStudy(); } }
   else if(e.key === 'ArrowRight') answer(true);
